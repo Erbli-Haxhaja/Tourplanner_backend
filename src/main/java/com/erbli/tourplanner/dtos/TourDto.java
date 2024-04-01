@@ -6,7 +6,7 @@ import lombok.Data;
 @Data
 @Builder
 public class TourDto {
-    private Long id;
+    private int id;
     private String name;
     private String tourDescription;
     private String fromm;
@@ -20,7 +20,7 @@ public class TourDto {
     public TourDto() {
     }
 
-    public TourDto(Long id, String name, String tourDescription, String fromm, String too, String transportType, String tourDistance, String estimatedTime, String routeInformation) {
+    public TourDto(int id, String name, String tourDescription, String fromm, String too, String transportType, String tourDistance, String estimatedTime, String routeInformation) {
         this.id = id;
         this.name = name;
         this.tourDescription = tourDescription;
@@ -33,11 +33,11 @@ public class TourDto {
     }
 
     // Getters and setters
-    public Long getId() {
+    public int getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(int id) {
         this.id = id;
     }
 

@@ -9,10 +9,11 @@ import lombok.Data;
 
 @Entity
 @Table(name ="Tour")
+@Builder
 public class Tour {
     @Id
     @GeneratedValue
-    private Long id;
+    private int id;
     private String name;
     private String tourDescription;
     private String fromm;
@@ -22,7 +23,8 @@ public class Tour {
     private String estimatedTime;
     private String routeInformation;
 
-    public Tour(String name, String tourDescription, String from, String to, String transportType, String tourDistance, String estimatedTime, String routeInformation) {
+    public Tour(int id, String name, String tourDescription, String from, String to, String transportType, String tourDistance, String estimatedTime, String routeInformation) {
+        this.id = id;
         this.name = name;
         this.tourDescription = tourDescription;
         this.fromm = from;
