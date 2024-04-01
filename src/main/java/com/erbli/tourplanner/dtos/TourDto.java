@@ -1,14 +1,11 @@
-package com.erbli.tourplanner.model;
+package com.erbli.tourplanner.dtos;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import lombok.Builder;
+import lombok.Data;
 
-@Entity
-public class Tour {
-    @Id
-    @GeneratedValue
+@Data
+@Builder
+public class TourDto {
     private Long id;
     private String name;
     private String tourDescription;
@@ -19,19 +16,29 @@ public class Tour {
     private String estimatedTime;
     private String routeInformation;
 
-    public Tour(String name, String tourDescription, String from, String to, String transportType, String tourDistance, String estimatedTime, String routeInformation) {
+    // Constructors
+    public TourDto() {
+    }
+
+    public TourDto(Long id, String name, String tourDescription, String fromm, String too, String transportType, String tourDistance, String estimatedTime, String routeInformation) {
+        this.id = id;
         this.name = name;
         this.tourDescription = tourDescription;
-        this.fromm = from;
-        this.too = to;
+        this.fromm = fromm;
+        this.too = too;
         this.transportType = transportType;
         this.tourDistance = tourDistance;
         this.estimatedTime = estimatedTime;
         this.routeInformation = routeInformation;
     }
 
-    public Tour() {
+    // Getters and setters
+    public Long getId() {
+        return id;
+    }
 
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public String getName() {
