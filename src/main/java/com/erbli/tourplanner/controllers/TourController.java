@@ -22,4 +22,10 @@ public class TourController {
     public List<Tour> getAllTours() {
         return tourRepository.findAll();
     }
+
+    @DeleteMapping("/deleteTour/{id}")
+    public String deleteById(@PathVariable("id") Long id) {
+        tourRepository.deleteById(id);
+        return "Tour deleted";
+    }
 }
