@@ -34,7 +34,6 @@ class TourplannerApplicationTests {
 				.transportType("Train")
 				.tourDistance("2km")
 				.estimatedTime("2h")
-				.routeInformation("picture")
 				.build();
 		System.out.println("There were " + tourRepository.count() + " tours!");
 		tourRepository.save(tour);
@@ -51,7 +50,6 @@ class TourplannerApplicationTests {
 				.transportType("Train")
 				.tourDistance("2km")
 				.estimatedTime("2h")
-				.routeInformation("picture")
 				.build();
 
 		TourDto tourDto = tourDtoMapper.mapTourToTourDto(tour);

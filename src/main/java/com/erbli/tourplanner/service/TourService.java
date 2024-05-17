@@ -13,7 +13,6 @@ public class TourService {
     @Autowired
     TourDtoMapper tourDtoMapper;
     public TourDto getTours() {
-        //Tour tour = new Tour( "Tour1", "This is a tour", "Place 1", "Place 2", "Train", "2km", "2 h", "/usr/photos");
         Tour tour = Tour.builder()
                 .name("This is a tour")
                 .tourDescription("Description")
@@ -22,7 +21,6 @@ public class TourService {
                 .transportType("Train")
                 .tourDistance("2km")
                 .estimatedTime("2h")
-                .routeInformation("picture")
                 .build();
 
         TourDto tourDto = tourDtoMapper.mapTourToTourDto(tour);

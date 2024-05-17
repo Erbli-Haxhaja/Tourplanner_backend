@@ -3,25 +3,25 @@ package com.erbli.tourplanner.controllers;
 import com.erbli.tourplanner.entities.Tour;
 import com.erbli.tourplanner.repositories.TourRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
+@RequestMapping("/tours")
 public class TourController {
     @Autowired
     private TourRepository tourRepository;
 
+    @CrossOrigin(origins = "http://localhost:3000")
     @PostMapping("/createTour")
-    Tour newTour(@RequestBody Tour newTour) {
+    public Tour newTour(@RequestBody Tour newTour) {
         return tourRepository.save(newTour);
     }
 
-    @GetMapping("/tours")
-    List<Tour> getAllTours() {
+    @CrossOrigin(origins = "http://localhost:3000")
+    @GetMapping
+    public List<Tour> getAllTours() {
         return tourRepository.findAll();
     }
 }
