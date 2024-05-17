@@ -4,7 +4,8 @@ import GoogleMapReact from 'google-map-react';
 function App() {
   // State for tour logs
   const [tourLogs, setTourLogs] = useState([]);
-  const [showForm, setShowForm] = useState(false);
+  const [showAddTourForm, setShowAddTourForm] = useState(false);
+  const [showRemoveTourForm, setShowRemoveTourForm] = useState(false);
   const [newTour, setNewTour] = useState({
     name: '',
     tourDescription: '',
@@ -14,6 +15,7 @@ function App() {
     tourDistance: '',
     estimatedTime: ''
   });
+  const [removeTourId, setRemoveTourId] = useState('');
 
   // Fetch tour logs from the backend
   useEffect(() => {
@@ -44,15 +46,24 @@ function App() {
   };
 
   const handleAddTour = () => {
-    setShowForm(true);
+    setShowAddTourForm(true);
   };
 
-  const handleFormChange = (e) => {
+  const handleRemoveTour = () => {
+    setShowRemoveTourForm(true);
+  };
+
+  const handleAddTourFormChange = (e) => {
     const { name, value } = e.target;
     setNewTour({ ...newTour, [name]: value });
   };
 
-  const handleFormSubmit = (e) => {
+  const handleRemoveTourFormChange = (e) => {
+    const { value } = e.target;
+    setRemoveTourId(value);
+  };
+
+  const handleAddTourFormSubmit = (e) => {
     e.preventDefault();
     fetch('http://localhost:8080/tours/createTour', {
       method: 'POST',
@@ -73,9 +84,25 @@ function App() {
             tourDistance: '',
             estimatedTime: ''
           });
-          setShowForm(false);
+          setShowAddTourForm(false);
         })
         .catch(error => console.error('Error adding new tour:', error));
+  };
+
+  const handleRemoveTourFormSubmit = (e) => {
+    e.preventDefault();
+    fetch(`http://localhost:8080/tours/deleteTour/${removeTourId}`, {
+      method: 'DELETE'
+    })
+        .then(response => {
+          if (response.ok) {
+            setTourLogs(tourLogs.filter(tour => tour.id !== parseInt(removeTourId)));
+            setShowRemoveTourForm(false);
+          } else {
+            throw new Error('Failed to delete tour');
+          }
+        })
+        .catch(error => console.error('Error deleting tour:', error));
   };
 
   return (
@@ -101,7 +128,7 @@ function App() {
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
               <button id="add-tour-button" onClick={handleAddTour} style={addRemoveButton}><span>+</span>
               </button>
-              <button id="remove-tour-button" onClick={() => {}} style={addRemoveButton}>
+              <button id="remove-tour-button" onClick={handleRemoveTour} style={addRemoveButton}>
                 <span>-</span></button>
             </div>
           </div>
@@ -118,7 +145,6 @@ function App() {
                       defaultCenter={{ lat: 48.2082, lng: 16.3738 }}
                       defaultZoom={10}
                   >
-                    {/* Add map markers here if needed */}
                   </GoogleMapReact>
                 </div>
               </div>
@@ -160,105 +186,90 @@ function App() {
         </div>
 
         {/* Add Tour Form */}
-        {showForm && (
+        {showAddTourForm && (
             <div style={{ position: 'absolute', bottom: '20px', left: '20px', padding: '20px', border: '1px solid #ccc', backgroundColor: '#f9f9f9' }}>
               <h2>Add New Tour</h2>
-              <form onSubmit={handleFormSubmit}>
+              <form onSubmit={handleAddTourFormSubmit}>
+                {/* Form fields for adding a tour */}
+              </form>
+            </div>
+        )}
+
+        {/* Remove Tour Form */}
+        {showRemoveTourForm && (
+            <div style={{ position: 'absolute', bottom: '20px', left: '20px', padding: '20px', border: '1px solid #ccc', backgroundColor: '#f9f9f9' }}>
+              <h2>Remove Tour</h2>
+              <form onSubmit={handleRemoveTourFormSubmit}>
                 <div style={{ marginBottom: '10px' }}>
-                  <label htmlFor="name" style={{ marginRight: '10px' }}>Name:</label>
-                  <input type="text" id="name" name="name" value={newTour.name} onChange={handleFormChange} />
-                </div>
-                <div style={{ marginBottom: '10px' }}>
-                  <label htmlFor="tourDescription" style={{ marginRight: '10px' }}>Tour Description:</label>
-                  <input type="text" id="tourDescription" name="tourDescription" value={newTour.tourDescription} onChange={handleFormChange
-                  } />
-                </div>
-                <div style={{ marginBottom: '10px' }}>
-                  <label htmlFor="fromm" style={{ marginRight: '10px' }}>From:</label>
-                  <input type="text" id="fromm" name="fromm" value={newTour.fromm} onChange={handleFormChange} />
-                </div>
-                <div style={{ marginBottom: '10px' }}>
-                  <label htmlFor="too" style={{ marginRight: '10px' }}>To:</label>
-                  <input type="text" id="too" name="too" value={newTour.too} onChange={handleFormChange} />
-                </div>
-                <div style={{ marginBottom: '10px' }}>
-                  <label htmlFor="transportType" style={{ marginRight: '10px' }}>Transport Type:</label>
-                  <input type="text" id="transportType" name="transportType" value={newTour.transportType} onChange={handleFormChange} />
-                </div>
-                <div style={{ marginBottom: '10px' }}>
-                  <label htmlFor="tourDistance" style={{ marginRight: '10px' }}>Tour Distance:</label>
-                  <input type="text" id="tourDistance" name="tourDistance" value={newTour.tourDistance} onChange={handleFormChange} />
-                </div>
-                <div style={{ marginBottom: '10px' }}>
-                  <label htmlFor="estimatedTime" style={{ marginRight: '10px' }}>Estimated Time:</label>
-                  <input type="text" id="estimatedTime" name="estimatedTime" value={newTour.estimatedTime} onChange={handleFormChange} />
+                  <label htmlFor="removeTourId" style={{ marginRight: '10px' }}>Tour ID:</label>
+                  <input type="text" id="removeTourId" name="removeTourId" value={removeTourId} onChange={handleRemoveTourFormChange} />
                 </div>
                 <div>
                   <button type="submit" style={submitButtonStyle}>Send</button>
-                  <button type="button" onClick={() => setShowForm(false)} style={cancelButtonStyle}>Cancel</button>
+                  <button type="button" onClick={() => setShowRemoveTourForm(false)} style={cancelButtonStyle}>Cancel</button>
                 </div>
               </form>
             </div>
         )}
       </div>
-  );
+);
 }
 
 // Inline CSS styles
 const buttonStyle = {
   background: 'none',
-  border: 'none',
-  color: 'white',
-  padding: '5px 10px',
-  marginRight: '10px',
-  cursor: 'pointer'
+      border: 'none',
+      color: 'white',
+      padding: '5px 10px',
+      marginRight: '10px',
+      cursor: 'pointer'
 };
 
 const addRemoveButton = {
   background: 'white',
-  border: 'black 1px solid',
-  color: 'black',
-  padding: '5px 10px',
-  marginRight: '10px',
-  cursor: 'pointer'
+      border: 'black 1px solid',
+      color: 'black',
+      padding: '5px 10px',
+      marginRight: '10px',
+      cursor: 'pointer'
 };
 
 const tableHeaderStyle = {
   borderBottom: '1px solid #ccc',
-  padding: '8px',
-  textAlign: 'left'
+      padding: '8px',
+      textAlign: 'left'
 };
 
 const tableCellStyle = {
   border: '1px solid #ccc',
-  padding: '8px',
-  textAlign: 'left'
+      padding: '8px',
+      textAlign: 'left'
 };
 
 const submitButtonStyle = {
   background: '#4CAF50',
-  border: 'none',
-  color: 'white',
-  padding: '10px 20px',
-  textAlign: 'center',
-  textDecoration: 'none',
-  display: 'inline-block',
-  fontSize: '16px',
-  margin: '4px 2px',
-  cursor: 'pointer'
+      border: 'none',
+      color: 'white',
+      padding: '10px 20px',
+      textAlign: 'center',
+      textDecoration: 'none',
+      display: 'inline-block',
+      fontSize: '16px',
+      margin: '4px 2px',
+      cursor: 'pointer'
 };
 
 const cancelButtonStyle = {
   background: '#f44336',
-  border: 'none',
-  color: 'white',
-  padding: '10px 20px',
-  textAlign: 'center',
-  textDecoration: 'none',
-  display: 'inline-block',
-  fontSize: '16px',
-  margin: '4px 2px',
-  cursor: 'pointer'
+      border: 'none',
+      color: 'white',
+      padding: '10px 20px',
+      textAlign: 'center',
+      textDecoration: 'none',
+      display: 'inline-block',
+      fontSize: '16px',
+      margin: '4px 2px',
+      cursor: 'pointer'
 };
 
 export default App;
