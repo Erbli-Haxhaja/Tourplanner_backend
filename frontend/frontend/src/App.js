@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import GoogleMapReact from 'google-map-react';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
 
 function App() {
     // State for tour logs
@@ -106,7 +107,6 @@ function App() {
             .catch(error => console.error('Error deleting tour:', error));
     };
 
-
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
             {/* Navigation Bar */}
@@ -142,13 +142,13 @@ function App() {
                         <div className="map-container" style={mapContainerStyle}>
                             <h2>Map</h2>
                             <div style={{ height: '400px', width: '100%', ...mapWrapperStyle }}>
-                                <GoogleMapReact
-                                    bootstrapURLKeys={{ key: 'AIzaSyALBWDLLBvnHcUHE214tulcMeN-SUMdT0o' }}
-                                    defaultCenter={{ lat: 48.2082, lng: 16.3738 }}
-                                    defaultZoom={10}
-                                >
+                                <MapContainer center={[48.2082, 16.3738]} zoom={13} style={{ height: '100%', width: '100%' }}>
+                                    <TileLayer
+                                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                    />
                                     {/* Add map markers here if needed */}
-                                </GoogleMapReact>
+                                </MapContainer>
                             </div>
                         </div>
                     </div>
@@ -177,8 +177,7 @@ function App() {
                                     <td style={tableCellStyle}>{log.tourDescription}</td>
                                     <td style={tableCellStyle}>{log.fromm}</td>
                                     <td style={tableCellStyle}>{log.too}</td>
-                                    <td style={tableCellStyle}>{log.transportType
-                                    }</td>
+                                    <td style={tableCellStyle}>{log.transportType}</td>
                                     <td style={tableCellStyle}>{log.tourDistance}</td>
                                     <td style={tableCellStyle}>{log.estimatedTime}</td>
                                 </tr>
@@ -209,12 +208,17 @@ function App() {
                             <label htmlFor="too" style={{ marginRight: '10px' }}>To:</label>
                             <input type="text" id="too" name="too" value={newTour.too} onChange={handleAddFormChange} />
                         </div>
-                        <div style={{ marginBottom: '10px' }}>
-                            <label htmlFor="transportType" style={{ marginRight: '10px' }}>Transport Type:</label>
-                            <input type="text" id="transportType" name="transportType" value={newTour.transportType} onChange={handleAddFormChange} />
+                        <div style={{marginBottom: '10px'}}>
+                            <label htmlFor="transportType" style={{marginRight: '10px'}}>Transport Type:</label>
+                            <select id="transportType" name="transportType" value={newTour.transportType}
+                                    onChange={handleAddFormChange}>
+                                <option value="Foot">Foot</option>
+                                <option value="Car">Car</option>
+                                <option value="Bicycle">Bicycle</option>
+                            </select>
                         </div>
-                        <div style={{ marginBottom: '10px' }}>
-                            <label htmlFor="tourDistance" style={{ marginRight: '10px' }}>Tour Distance:</label>
+                        <div style={{marginBottom: '10px'}}>
+                            <label htmlFor="tourDistance" style={{marginRight: '10px'}}>Tour Distance:</label>
                             <input type="text" id="tourDistance" name="tourDistance" value={newTour.tourDistance} onChange={handleAddFormChange} />
                         </div>
                         <div style={{ marginBottom: '10px' }}>
