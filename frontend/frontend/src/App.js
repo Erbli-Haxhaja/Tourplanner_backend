@@ -1,9 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import axios from 'axios';
+import { Icon } from 'leaflet';
+
+const API_KEY = '5b3ce3597851110001cf62488836d19f8eeb43d587d46df7986b2e53';
+const GEOCODING_API_KEY = '73f92eb6b8114d53bbae5353fcce02cb'; // Replace with your OpenCage Data API key
+
+const customIcon = new Icon({
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41]
+});
 
 function App() {
-    // State for tour logs
     const [tourLogs, setTourLogs] = useState([]);
     const [showAddForm, setShowAddForm] = useState(false);
     const [showRemoveForm, setShowRemoveForm] = useState(false);
@@ -12,25 +22,16 @@ function App() {
         tourDescription: '',
         fromm: '',
         too: '',
-        transportType: '',
-        tourDistance: '',
-        estimatedTime: ''
+        transportType: ''
     });
     const [removeId, setRemoveId] = useState('');
+    const [mapMarkers, setMapMarkers] = useState([]);
+    const [pathCoordinates, setPathCoordinates] = useState([]);
 
-    // Fetch tour logs from the backend
     useEffect(() => {
         fetch('http://localhost:8080/tours')
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok ' + response.statusText);
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log('Fetched data:', data); // Log the fetched data
-                setTourLogs(data);
-            })
+            .then(response => response.json())
+            .then(data => setTourLogs(data))
             .catch(error => console.error('Error fetching tour logs:', error));
     }, []);
 
@@ -61,30 +62,62 @@ function App() {
         setNewTour({ ...newTour, [name]: value });
     };
 
-    const handleAddFormSubmit = (e) => {
+    const handleAddFormSubmit = async (e) => {
         e.preventDefault();
-        fetch('http://localhost:8080/tours/createTour', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(newTour)
-        })
-            .then(response => response.json())
-            .then(data => {
-                setTourLogs([...tourLogs, data]);
-                setNewTour({
-                    name: '',
-                    tourDescription: '',
-                    fromm: '',
-                    too: '',
-                    transportType: '',
-                    tourDistance: '',
-                    estimatedTime: ''
-                });
-                setShowAddForm(false);
-            })
-            .catch(error => console.error('Error adding new tour:', error));
+
+        try {
+            const fromResponse = await axios.get(`https://api.opencagedata.com/geocode/v1/json?q=${newTour.fromm}&key=${GEOCODING_API_KEY}`);
+            const fromCoords = fromResponse.data.results[0].geometry;
+
+            const toResponse = await axios.get(`https://api.opencagedata.com/geocode/v1/json?q=${newTour.too}&key=${GEOCODING_API_KEY}`);
+            const toCoords = toResponse.data.results[0].geometry;
+
+            const orsResponse = await axios.get(`https://api.openrouteservice.org/v2/directions/driving-car?api_key=${API_KEY}&start=${fromCoords.lng},${fromCoords.lat}&end=${toCoords.lng},${toCoords.lat}`);
+            const { distance, duration, steps } = orsResponse.data.features[0].properties.segments[0];
+
+            const distanceMeters = `${distance.toFixed(2)} m`;
+            const durationMinutes = Math.floor(duration / 60);
+            const durationSeconds = (duration % 60).toFixed(2);
+            const durationFormatted = `${durationMinutes} min ${durationSeconds} s`;
+
+            const tourData = {
+                ...newTour,
+                tourDistance: distanceMeters,
+                estimatedTime: durationFormatted
+            };
+
+            const response = await fetch('http://localhost:8080/tours/createTour', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(tourData)
+            });
+
+            const data = await response.json();
+            setTourLogs([...tourLogs, data]);
+            setNewTour({
+                name: '',
+                tourDescription: '',
+                fromm: '',
+                too: '',
+                transportType: ''
+            });
+            setShowAddForm(false);
+
+            setMapMarkers([
+                { coords: fromCoords, name: newTour.fromm },
+                { coords: toCoords, name: newTour.too }
+            ]);
+
+            const pathCoords = orsResponse.data.features[0].geometry.coordinates.map(coord => ({
+                lat: coord[1],
+                lng: coord[0]
+            }));
+            setPathCoordinates(pathCoords);
+        } catch (error) {
+            console.error('Error adding new tour:', error);
+        }
     };
 
     const handleRemoveFormChange = (e) => {
@@ -109,7 +142,6 @@ function App() {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-            {/* Navigation Bar */}
             <nav style={{ backgroundColor: '#333', padding: '10px', display: 'flex' }}>
                 <button id="file" style={buttonStyle}>File</button>
                 <button id="edit" style={buttonStyle}>Edit</button>
@@ -117,9 +149,7 @@ function App() {
                 <button id="help" style={buttonStyle}>Help</button>
             </nav>
 
-            {/* Main Content */}
             <div style={{ display: 'flex', flex: 1 }}>
-                {/* Left Panel */}
                 <div style={{ flex: 1, padding: '20px' }}>
                     <h2 style={{ marginBottom: '10px' }}>Tour List</h2>
                     <ul style={{ listStyle: 'none', padding: 0, marginBottom: '20px' }}>
@@ -128,16 +158,12 @@ function App() {
                         ))}
                     </ul>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                        <button id="add-tour-button" onClick={handleAddTour} style={addRemoveButton}><span>+</span>
-                        </button>
-                        <button id="remove-tour-button" onClick={handleRemoveTour} style={addRemoveButton}>
-                            <span>-</span></button>
+                        <button id="add-tour-button" onClick={handleAddTour} style={addRemoveButton}><span>+</span></button>
+                        <button id="remove-tour-button" onClick={handleRemoveTour} style={addRemoveButton}><span>-</span></button>
                     </div>
                 </div>
 
-                {/* Right Panel */}
                 <div style={{ flex: 2, display: 'flex', flexDirection: 'column' }}>
-                    {/* Map of Vienna */}
                     <div style={{ flex: 1, padding: '20px', border: '1px solid #ccc', marginRight: '10px' }}>
                         <div className="map-container" style={mapContainerStyle}>
                             <h2>Map</h2>
@@ -147,13 +173,23 @@ function App() {
                                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                                         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                                     />
-                                    {/* Add map markers here if needed */}
+                                    {mapMarkers.map((marker, index) => (
+                                        <Marker
+                                            key={index}
+                                            position={[marker.coords.lat, marker.coords.lng]}
+                                            icon={customIcon}
+                                        >
+                                            <Popup>{marker.name}</Popup>
+                                        </Marker>
+                                    ))}
+                                    {pathCoordinates.length > 0 && (
+                                        <Polyline positions={pathCoordinates} color="blue" />
+                                    )}
                                 </MapContainer>
                             </div>
                         </div>
                     </div>
 
-                    {/* Tour Logs */}
                     <div style={{ flex: 1, padding: '20px', border: '1px solid #ccc', marginBottom: '10px' }}>
                         <h2>Tour Logs</h2>
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -187,7 +223,7 @@ function App() {
                     </div>
                 </div>
             </div>
-            {/* Add Tour Form */}
+
             {showAddForm && (
                 <div style={{ position: 'absolute', bottom: '20px', left: '20px', padding: '20px', border: '1px solid #ccc', backgroundColor: '#f9f9f9' }}>
                     <h2>Add New Tour</h2>
@@ -210,20 +246,11 @@ function App() {
                         </div>
                         <div style={{marginBottom: '10px'}}>
                             <label htmlFor="transportType" style={{marginRight: '10px'}}>Transport Type:</label>
-                            <select id="transportType" name="transportType" value={newTour.transportType}
-                                    onChange={handleAddFormChange}>
+                            <select id="transportType" name="transportType" value={newTour.transportType} onChange={handleAddFormChange}>
                                 <option value="Foot">Foot</option>
                                 <option value="Car">Car</option>
                                 <option value="Bicycle">Bicycle</option>
                             </select>
-                        </div>
-                        <div style={{marginBottom: '10px'}}>
-                            <label htmlFor="tourDistance" style={{marginRight: '10px'}}>Tour Distance:</label>
-                            <input type="text" id="tourDistance" name="tourDistance" value={newTour.tourDistance} onChange={handleAddFormChange} />
-                        </div>
-                        <div style={{ marginBottom: '10px' }}>
-                            <label htmlFor="estimatedTime" style={{ marginRight: '10px' }}>Estimated Time:</label>
-                            <input type="text" id="estimatedTime" name="estimatedTime" value={newTour.estimatedTime} onChange={handleAddFormChange} />
                         </div>
                         <div>
                             <button type="submit" style={submitButtonStyle}>Send</button>
@@ -233,7 +260,6 @@ function App() {
                 </div>
             )}
 
-            {/* Remove Tour Form */}
             {showRemoveForm && (
                 <div style={{ position: 'absolute', bottom: '20px', left: '20px', padding: '20px', border: '1px solid #ccc', backgroundColor: '#f9f9f9' }}>
                     <h2>Remove Tour</h2>
@@ -253,7 +279,6 @@ function App() {
     );
 }
 
-// Inline CSS styles
 const buttonStyle = {
     background: 'none',
     border: 'none',
