@@ -26,7 +26,7 @@ public class TourLogsController {
     }
 
     @GetMapping
-    public List<TourLogs> getAllTours() {
+    public List<TourLogs> getAllTourLogs() {
         logger.info("TourLog Returned!");
         return tourlogRepository.findAll();
     }

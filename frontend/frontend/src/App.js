@@ -18,6 +18,7 @@ function App() {
     const [tourLogs, setTourLogs] = useState([]);
     const [showAddForm, setShowAddForm] = useState(false);
     const [showRemoveForm, setShowRemoveForm] = useState(false);
+    const [showImportModal, setShowImportModal] = useState(false);
     const [formType, setFormType] = useState('Tour'); // to differentiate between Tour and Tour Log forms
     const [newTour, setNewTour] = useState({
         name: '',
@@ -40,6 +41,8 @@ function App() {
     const [mapMarkers, setMapMarkers] = useState([]);
     const [pathCoordinates, setPathCoordinates] = useState([]);
     const [activeTab, setActiveTab] = useState('Tours');
+    const [importFile, setImportFile] = useState(null);
+    const [dropdownVisible, setDropdownVisible] = useState(false);
 
     useEffect(() => {
         fetch('http://localhost:8080/tours')
@@ -212,10 +215,66 @@ function App() {
             .catch(error => console.error('Error deleting:', error));
     };
 
+    const handleFileChange = (e) => {
+        setImportFile(e.target.files[0]);
+    };
+
+    const handleImportSubmit = async () => {
+        if (!importFile) return;
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const fileContent = e.target.result;
+
+            try {
+                const response = await axios.post('http://localhost:8080/tours/createTour', JSON.parse(fileContent), {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.data;
+                setTours([...tours, data]);
+                setShowImportModal(false);
+            } catch (error) {
+                console.error('Error importing tour:', error);
+            }
+        };
+
+        reader.readAsText(importFile);
+    };
+
+    const handleExportTours = async () => {
+        try {
+            const response = await axios.get('http://localhost:8080/tours');
+            const toursData = response.data;
+
+            const blob = new Blob([JSON.stringify(toursData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'exported_tours.json';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch (error) {
+            console.error('Error exporting tours:', error);
+        }
+    };
+
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
             <nav style={{ backgroundColor: '#333', padding: '10px', display: 'flex' }}>
-                <button id="file" style={buttonStyle}>File</button>
+                <div style={{ position: 'relative' }}>
+                    <button id="file" style={buttonStyle} onClick={() => setDropdownVisible(!dropdownVisible)}>File</button>
+                    {dropdownVisible && (
+                        <div style={dropdownContentStyle}>
+                            <button onClick={() => { setShowImportModal(true); setDropdownVisible(false); }} style={dropdownItemStyle}>Import Tour</button>
+                            <button onClick={handleExportTours} style={dropdownItemStyle}>Export Tour</button>
+                            <button style={dropdownItemStyle}>Generate Report</button>
+                        </div>
+                    )}
+                </div>
                 <button id="edit" style={buttonStyle}>Edit</button>
                 <button id="options" style={buttonStyle}>Options</button>
                 <button id="help" style={buttonStyle}>Help</button>
@@ -229,10 +288,6 @@ function App() {
                             <li key={index}>{tour.name}</li>
                         ))}
                     </ul>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                        <button id="add-tour-button" onClick={handleAddTour} style={addRemoveButton}><span>+</span></button>
-                        <button id="remove-tour-button" onClick={handleRemoveTour} style={addRemoveButton}><span>-</span></button>
-                    </div>
                 </div>
 
                 <div style={{ flex: 2, display: 'flex', flexDirection: 'column' }}>
@@ -262,7 +317,7 @@ function App() {
                         </div>
                     </div>
 
-                    <div style={{ flex: 1, padding: '20px', border: '1px solid #ccc', marginBottom: '10px' }}>
+                    <div style={{flex: 1, padding: '20px', border: '1px solid #ccc', marginBottom: '10px'}}>
                         <div>
                             <button onClick={() => setActiveTab('Tours')} style={tabButtonStyle}>
                                 Tours
@@ -271,10 +326,28 @@ function App() {
                                 Tour Logs
                             </button>
                         </div>
+                        <div style={{display: 'flex', justifyContent: 'flex-end', marginTop: '10px'}}>
+                            {activeTab === 'Tours' && (
+                                <>
+                                    <button id="add-tour-button" onClick={handleAddTour} style={addRemoveButton}>
+                                        <span>+</span></button>
+                                    <button id="remove-tour-button" onClick={handleRemoveTour} style={addRemoveButton}>
+                                        <span>-</span></button>
+                                </>
+                            )}
+                            {activeTab === 'Tour Logs' && (
+                                <>
+                                    <button id="add-tourlog-button" onClick={handleAddTourLog} style={addRemoveButton}>
+                                        <span>+</span></button>
+                                    <button id="remove-tourlog-button" onClick={handleRemoveTourLog}
+                                            style={addRemoveButton}><span>-</span></button>
+                                </>
+                            )}
+                        </div>
                         {activeTab === 'Tours' && (
                             <div>
                                 <h2>Tours</h2>
-                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                <table style={{width: '100%', borderCollapse: 'collapse'}}>
                                     <thead>
                                     <tr>
                                         <th style={tableHeaderStyle}>Tour ID</th>
@@ -307,7 +380,7 @@ function App() {
                         {activeTab === 'Tour Logs' && (
                             <div>
                                 <h2>Tour Logs</h2>
-                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                <table style={{width: '100%', borderCollapse: 'collapse'}}>
                                     <thead>
                                     <tr>
                                         <th style={tableHeaderStyle}>ID</th>
@@ -317,140 +390,146 @@ function App() {
                                         <th style={tableHeaderStyle}>Comment</th>
                                         <th style={tableHeaderStyle}>Difficulty</th>
                                         <th style={tableHeaderStyle}>Total Distance</th>
-                                        <th style={tableHeaderStyle}>Total Time</th>
-                                        <th style={tableHeaderStyle}>Rating</th>
+                                    <th style={tableHeaderStyle}>Total Time</th>
+                                    <th style={tableHeaderStyle}>Rating</th>
                                     </tr>
-                                    </thead>
-                                    <tbody>
-                                    {tourLogs.map((log, index) => (
-                                        <tr key={index}>
-                                            <td style={tableCellStyle}>{log.id}</td>
-                                            <td style={tableCellStyle}>{log.tourid}</td>
-                                            <td style={tableCellStyle}>{log.date}</td>
-                                            <td style={tableCellStyle}>{log.time}</td>
-                                            <td style={tableCellStyle}>{log.comment}</td>
-                                            <td style={tableCellStyle}>{log.difficulty}</td>
-                                            <td style={tableCellStyle}>{log.totalDistance}</td>
-                                            <td style={tableCellStyle}>{log.totalTime}</td>
-                                            <td style={tableCellStyle}>{log.rating}</td>
-                                        </tr>
-                                    ))}
-                                    </tbody>
-                                </table>
+                                </thead>
+                                <tbody>
+                                {tourLogs.map((log, index) => (
+                                    <tr key={index}>
+                                        <td style={tableCellStyle}>{log.id}</td>
+                                        <td style={tableCellStyle}>{log.tourid}</td>
+                                        <td style={tableCellStyle}>{log.date}</td>
+                                        <td style={tableCellStyle}>{log.time}</td>
+                                        <td style={tableCellStyle}>{log.comment}</td>
+                                        <td style={tableCellStyle}>{log.difficulty}</td>
+                                        <td style={tableCellStyle}>{log.totalDistance}</td>
+                                        <td style={tableCellStyle}>{log.totalTime}</td>
+                                        <td style={tableCellStyle}>{log.rating}</td>
+                                    </tr>
+                                ))}
+                                </tbody>
+                            </table>
                             </div>
-                        )}
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
-                            {activeTab === 'Tours' && (
-                                <>
-                                    <button id="add-tour-button" onClick={handleAddTour} style={addRemoveButton}><span>+</span></button>
-                                    <button id="remove-tour-button" onClick={handleRemoveTour} style={addRemoveButton}><span>-</span></button>
-                                </>
                             )}
-                            {activeTab === 'Tour Logs' && (
-                                <>
-                                    <button id="add-tourlog-button" onClick={handleAddTourLog} style={addRemoveButton}><span>+</span></button>
-                                    <button id="remove-tourlog-button" onClick={handleRemoveTourLog} style={addRemoveButton}><span>-</span></button>
-                                </>
-                            )}
-                        </div>
+
                     </div>
                 </div>
             </div>
 
             {showAddForm && formType === 'Tour' && (
-                <div style={{ position: 'absolute', bottom: '20px', left: '20px', padding: '20px', border: '1px solid #ccc', backgroundColor: '#f9f9f9' }}>
-                    <h2>Add New Tour</h2>
-                    <form onSubmit={handleAddFormSubmit}>
-                        <div style={{ marginBottom: '10px' }}>
-                            <label htmlFor="name" style={{ marginRight: '10px' }}>Name:</label>
-                            <input type="text" id="name" name="name" value={newTour.name} onChange={handleAddFormChange} />
-                        </div>
-                        <div style={{ marginBottom: '10px' }}>
-                            <label htmlFor="tourDescription" style={{ marginRight: '10px' }}>Tour Description:</label>
-                            <input type="text" id="tourDescription" name="tourDescription" value={newTour.tourDescription} onChange={handleAddFormChange} />
-                        </div>
-                        <div style={{ marginBottom: '10px' }}>
-                            <label htmlFor="fromm" style={{ marginRight: '10px' }}>From:</label>
-                            <input type="text" id="fromm" name="fromm" value={newTour.fromm} onChange={handleAddFormChange} />
-                        </div>
-                        <div style={{ marginBottom: '10px' }}>
-                            <label htmlFor="too" style={{ marginRight: '10px' }}>To:</label>
-                            <input type="text" id="too" name="too" value={newTour.too} onChange={handleAddFormChange} />
-                        </div>
-                        <div style={{marginBottom: '10px'}}>
-                            <label htmlFor="transportType" style={{marginRight: '10px'}}>Transport Type:</label>
-                            <select id="transportType" name="transportType" value={newTour.transportType} onChange={handleAddFormChange}>
-                                <option value="Foot">Foot</option>
-                                <option value="Car">Car</option>
-                                <option value="Bicycle">Bicycle</option>
-                            </select>
-                        </div>
-                        <div>
-                            <button type="submit" style={submitButtonStyle}>Send</button>
-                            <button type="button" onClick={() => setShowAddForm(false)} style={cancelButtonStyle}>Cancel</button>
-                        </div>
-                    </form>
-                </div>
+            <div style={{
+                position: 'absolute',
+                bottom: '20px',
+                left: '20px',
+                padding: '20px',
+                border: '1px solid #ccc',
+                backgroundColor: '#f9f9f9'
+            }}>
+                <h2>Add New Tour</h2>
+                <form onSubmit={handleAddFormSubmit}>
+                    <div style={{marginBottom: '10px'}}>
+                        <label htmlFor="name" style={{marginRight: '10px'}}>Name:</label>
+                        <input type="text" id="name" name="name" value={newTour.name}
+                               onChange={handleAddFormChange}/>
+                    </div>
+                    <div style={{marginBottom: '10px'}}>
+                        <label htmlFor="tourDescription" style={{marginRight: '10px'}}>Tour Description:</label>
+                        <input type="text" id="tourDescription" name="tourDescription"
+                               value={newTour.tourDescription} onChange={handleAddFormChange}/>
+                    </div>
+                    <div style={{ marginBottom: '10px' }}>
+                        <label htmlFor="fromm" style={{ marginRight: '10px' }}>From:</label>
+                        <input type="text" id="fromm" name="fromm" value={newTour.fromm} onChange={handleAddFormChange} />
+                    </div>
+                    <div style={{ marginBottom: '10px' }}>
+                        <label htmlFor="too" style={{ marginRight: '10px' }}>To:</label>
+                        <input type="text" id="too" name="too" value={newTour.too} onChange={handleAddFormChange} />
+                    </div>
+                    <div style={{marginBottom: '10px'}}>
+                        <label htmlFor="transportType" style={{marginRight: '10px'}}>Transport Type:</label>
+                        <select id="transportType" name="transportType" value={newTour.transportType} onChange={handleAddFormChange}>
+                            <option value="Foot">Foot</option>
+                            <option value="Car">Car</option>
+                            <option value="Bicycle">Bicycle</option>
+                        </select>
+                    </div>
+                    <div>
+                        <button type="submit" style={submitButtonStyle}>Send</button>
+                        <button type="button" onClick={() => setShowAddForm(false)} style={cancelButtonStyle}>Cancel</button>
+                    </div>
+                </form>
+            </div>
             )}
 
             {showAddForm && formType === 'TourLog' && (
-                <div style={{ position: 'absolute', bottom: '20px', left: '20px', padding: '20px', border: '1px solid #ccc', backgroundColor: '#f9f9f9' }}>
-                    <h2>Add New Tour Log</h2>
-                    <form onSubmit={handleAddTourLogFormSubmit}>
-                        <div style={{ marginBottom: '10px' }}>
-                            <label htmlFor="tourid" style={{ marginRight: '10px' }}>Tour ID:</label>
-                            <input type="text" id="tourid" name="tourid" value={newTourLog.tourid} onChange={handleAddTourLogFormChange} />
-                        </div>
-                        <div style={{ marginBottom: '10px' }}>
-                            <label htmlFor="date" style={{ marginRight: '10px' }}>Date:</label>
-                            <input type="text" id="date" name="date" value={newTourLog.date} onChange={handleAddTourLogFormChange} />
-                        </div>
-                        <div style={{ marginBottom: '10px' }}>
-                            <label htmlFor="time" style={{ marginRight: '10px' }}>Time:</label>
-                            <input type="text" id="time" name="time" value={newTourLog.time} onChange={handleAddTourLogFormChange} />
-                        </div>
-                        <div style={{ marginBottom: '10px' }}>
-                            <label htmlFor="comment" style={{ marginRight: '10px' }}>Comment:</label>
-                            <input type="text" id="comment" name="comment" value={newTourLog.comment} onChange={handleAddTourLogFormChange} />
-                        </div>
-                        <div style={{ marginBottom: '10px' }}>
-                            <label htmlFor="difficulty" style={{ marginRight: '10px' }}>Difficulty:</label>
-                            <input type="text" id="difficulty" name="difficulty" value={newTourLog.difficulty} onChange={handleAddTourLogFormChange} />
-                        </div>
-                        <div style={{ marginBottom: '10px' }}>
-                            <label htmlFor="totalDistance" style={{ marginRight: '10px' }}>Total Distance:</label>
-                            <input type="text" id="totalDistance" name="totalDistance" value={newTourLog.totalDistance} onChange={handleAddTourLogFormChange} />
-                        </div>
-                        <div style={{ marginBottom: '10px' }}>
-                            <label htmlFor="totalTime" style={{ marginRight: '10px' }}>Total Time:</label>
-                            <input type="text" id="totalTime" name="totalTime" value={newTourLog.totalTime} onChange={handleAddTourLogFormChange} />
-                        </div>
-                        <div style={{ marginBottom: '10px' }}>
-                            <label htmlFor="rating" style={{ marginRight: '10px' }}>Rating:</label>
-                            <input type="text" id="rating" name="rating" value={newTourLog.rating} onChange={handleAddTourLogFormChange} />
-                        </div>
-                        <div>
-                            <button type="submit" style={submitButtonStyle}>Send</button>
-                            <button type="button" onClick={() => setShowAddForm(false)} style={cancelButtonStyle}>Cancel</button>
-                        </div>
-                    </form>
-                </div>
+            <div style={{ position: 'absolute', bottom: '20px', left: '20px', padding: '20px', border: '1px solid #ccc', backgroundColor: '#f9f9f9' }}>
+                <h2>Add New Tour Log</h2>
+                <form onSubmit={handleAddTourLogFormSubmit}>
+                    <div style={{ marginBottom: '10px' }}>
+                        <label htmlFor="tourid" style={{ marginRight: '10px' }}>Tour ID:</label>
+                        <input type="text" id="tourid" name="tourid" value={newTourLog.tourid} onChange={handleAddTourLogFormChange} />
+                    </div>
+                    <div style={{ marginBottom: '10px' }}>
+                        <label htmlFor="date" style={{ marginRight: '10px' }}>Date:</label>
+                        <input type="text" id="date" name="date" value={newTourLog.date} onChange={handleAddTourLogFormChange} />
+                    </div>
+                    <div style={{ marginBottom: '10px' }}>
+                        <label htmlFor="time" style={{ marginRight: '10px' }}>Time:</label>
+                        <input type="text" id="time" name="time" value={newTourLog.time} onChange={handleAddTourLogFormChange} />
+                    </div>
+                    <div style={{ marginBottom: '10px' }}>
+                        <label htmlFor="comment" style={{ marginRight: '10px' }}>Comment:</label>
+                        <input type="text" id="comment" name="comment" value={newTourLog.comment} onChange={handleAddTourLogFormChange} />
+                    </div>
+                    <div style={{ marginBottom: '10px' }}>
+                        <label htmlFor="difficulty" style={{ marginRight: '10px' }}>Difficulty:</label>
+                        <input type="text" id="difficulty" name="difficulty" value={newTourLog.difficulty} onChange={handleAddTourLogFormChange} />
+                    </div>
+                    <div style={{ marginBottom: '10px' }}>
+                        <label htmlFor="totalDistance" style={{ marginRight: '10px' }}>Total Distance:</label>
+                        <input type="text" id="totalDistance" name="totalDistance" value={newTourLog.totalDistance} onChange={handleAddTourLogFormChange} />
+                    </div>
+                    <div style={{ marginBottom: '10px' }}>
+                        <label htmlFor="totalTime" style={{ marginRight: '10px' }}>Total Time:</label>
+                        <input type="text" id="totalTime" name="totalTime" value={newTourLog.totalTime} onChange={handleAddTourLogFormChange} />
+                    </div>
+                    <div style={{ marginBottom: '10px' }}>
+                        <label htmlFor="rating" style={{ marginRight: '10px' }}>Rating:</label>
+                        <input type="text" id="rating" name="rating" value={newTourLog.rating} onChange={handleAddTourLogFormChange} />
+                    </div>
+                    <div>
+                        <button type="submit" style={submitButtonStyle}>Send</button>
+                        <button type="button" onClick={() => setShowAddForm(false)} style={cancelButtonStyle}>Cancel</button>
+                    </div>
+                </form>
+            </div>
             )}
 
             {showRemoveForm && (
-                <div style={{ position: 'absolute', bottom: '20px', left: '20px', padding: '20px', border: '1px solid #ccc', backgroundColor: '#f9f9f9' }}>
-                    <h2>Remove {formType === 'Tour' ? 'Tour' : 'Tour Log'}</h2>
-                    <form onSubmit={handleRemoveFormSubmit}>
-                        <div style={{ marginBottom: '10px' }}>
-                            <label htmlFor="removeId" style={{ marginRight: '10px' }}>ID:</label>
-                            <input type="text" id="removeId" name="removeId" value={removeId} onChange={handleRemoveFormChange} />
-                        </div>
-                        <div>
-                            <button type="submit" style={submitButtonStyle}>Send</button>
-                            <button type="button" onClick={() => setShowRemoveForm(false)} style={cancelButtonStyle}>Cancel</button>
-                        </div>
-                    </form>
-                </div>
+            <div style={{ position: 'absolute', bottom: '20px', left: '20px', padding: '20px', border: '1px solid #ccc', backgroundColor: '#f9f9f9' }}>
+                <h2>Remove {formType === 'Tour' ? 'Tour' : 'Tour Log'}</h2>
+                <form onSubmit={handleRemoveFormSubmit}>
+                    <div style={{ marginBottom: '10px' }}>
+                        <label htmlFor="removeId" style={{ marginRight: '10px' }}>ID:</label>
+                        <input type="text" id="removeId" name="removeId" value={removeId} onChange={handleRemoveFormChange} />
+                    </div>
+                    <div>
+                        <button type="submit" style={submitButtonStyle}>Send</button>
+                        <button type="button" onClick={() => setShowRemoveForm(false)} style={cancelButtonStyle}>Cancel</button>
+                    </div>
+                </form>
+            </div>
+            )}
+
+            {showImportModal && (
+            <div style={importModalStyle}>
+                <h2>Import Tour</h2>
+                <p>Here you can import a tour of your own. Upload a file in JSON format with the same attribute structure as the table of tours.</p>
+                <input type="file" onChange={handleFileChange} />
+                <button onClick={handleImportSubmit} style={submitButtonStyle}>Upload</button>
+                <button onClick={() => setShowImportModal(false)} style={cancelButtonStyle}>Cancel</button>
+            </div>
             )}
         </div>
     );
@@ -494,6 +573,23 @@ const tabButtonStyle = {
     background: '#f0f0f0'
 };
 
+const dropdownContentStyle = {
+    position: 'absolute',
+    backgroundColor: '#f9f9f9',
+    boxShadow: '0px 8px 16px 0px rgba(0,0,0,0.2)',
+    zIndex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    marginTop: '5px'
+};
+
+const dropdownItemStyle = {
+    color: 'black',
+    padding: '12px 16px',
+    textDecoration: 'none',
+    cursor: 'pointer'
+};
+
 const submitButtonStyle = {
     backgroundColor: '#4CAF50',
     color: 'white',
@@ -511,6 +607,17 @@ const cancelButtonStyle = {
     borderRadius: '4px',
     cursor: 'pointer',
     marginLeft: '10px'
+};
+
+const importModalStyle = {
+    position: 'fixed',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    padding: '20px',
+    border: '1px solid #ccc',
+    backgroundColor: '#f9f9f9',
+    zIndex: 1000
 };
 
 export default App;
