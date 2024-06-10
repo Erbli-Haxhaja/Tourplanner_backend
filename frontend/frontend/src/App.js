@@ -289,7 +289,7 @@ function App() {
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `tour_report_${reportTourId}.pdf`;
+            link.download = `tour_report.pdf`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);

@@ -36,5 +36,6 @@ public class TourLogsController {
         logger.info("Tour with id " + id + " deleted!");
         tourlogRepository.deleteById(id);
         return "TourLog deleted";
+
     }
 }

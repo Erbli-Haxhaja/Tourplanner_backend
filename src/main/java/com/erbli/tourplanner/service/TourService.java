@@ -71,14 +71,14 @@ public class TourService {
         document.add(new Paragraph("Tour PDF Generated Report").setBold().setFontSize(20));
 
         document.add(new Paragraph("Tour:").setBold());
-        document.add(new Paragraph("id: " + tour.getId()));
-        document.add(new Paragraph("name: " + tour.getName()));
-        document.add(new Paragraph("tourDescription: " + tour.getTourDescription()));
-        document.add(new Paragraph("fromm: " + tour.getFromm()));
-        document.add(new Paragraph("too: " + tour.getToo()));
-        document.add(new Paragraph("transportType: " + tour.getTransportType()));
-        document.add(new Paragraph("tourDistance: " + tour.getTourDistance()));
-        document.add(new Paragraph("estimatedTime: " + tour.getEstimatedTime()));
+        document.add(new Paragraph("ID: " + tour.getId()));
+        document.add(new Paragraph("Name: " + tour.getName()));
+        document.add(new Paragraph("Tour Description: " + tour.getTourDescription()));
+        document.add(new Paragraph("From: " + tour.getFromm()));
+        document.add(new Paragraph("To: " + tour.getToo()));
+        document.add(new Paragraph("Transport Type: " + tour.getTransportType()));
+        document.add(new Paragraph("Tour Distance: " + tour.getTourDistance()));
+        document.add(new Paragraph("Estimated Time: " + tour.getEstimatedTime()));
 
         document.close();
         return byteArrayOutputStream.toByteArray();
