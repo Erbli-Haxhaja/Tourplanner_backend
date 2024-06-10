@@ -19,6 +19,7 @@ function App() {
     const [showAddForm, setShowAddForm] = useState(false);
     const [showRemoveForm, setShowRemoveForm] = useState(false);
     const [showImportModal, setShowImportModal] = useState(false);
+    const [showReportModal, setShowReportModal] = useState(false);
     const [formType, setFormType] = useState('Tour'); // to differentiate between Tour and Tour Log forms
     const [newTour, setNewTour] = useState({
         name: '',
@@ -42,7 +43,9 @@ function App() {
     const [pathCoordinates, setPathCoordinates] = useState([]);
     const [activeTab, setActiveTab] = useState('Tours');
     const [importFile, setImportFile] = useState(null);
+    const [reportTourId, setReportTourId] = useState('');
     const [dropdownVisible, setDropdownVisible] = useState(false);
+    const [reportDropdownVisible, setReportDropdownVisible] = useState(false);
 
     useEffect(() => {
         fetch('http://localhost:8080/tours')
@@ -112,7 +115,7 @@ function App() {
             const toResponse = await axios.get(`https://api.opencagedata.com/geocode/v1/json?q=${newTour.too}&key=${GEOCODING_API_KEY}`);
             const toCoords = toResponse.data.results[0].geometry;
 
-            const orsResponse = await axios.get(`https://api.openrouteservice.org/v2/directions/driving-car?api_key=${API_KEY}&start=${fromCoords.lng},${fromCoords.lat}&end=${toCoords.lng},${toCoords.lat}`);
+            const orsResponse = await axios.get(`https://api.openrouteservice.org/v2/directions/driving-car?api_key=${API_KEY}&start=${fromCoords.lng},${fromCoords.lat}&end=${toCoords.lng}`);
             const { distance, duration } = orsResponse.data.features[0].properties.segments[0];
 
             const distanceMeters = `${distance.toFixed(2)} m`;
@@ -262,6 +265,40 @@ function App() {
         }
     };
 
+    const handleGenerateReport = async () => {
+        try {
+            const response = await axios.get(`http://localhost:8080/tours/tourReport/${reportTourId}`, { responseType: 'blob' });
+            const blob = new Blob([response.data], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `tour_report_${reportTourId}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setShowReportModal(false);
+        } catch (error) {
+            console.error('Error generating report:', error);
+        }
+    };
+
+    const handleSummarizeReport = async () => {
+        try {
+            const response = await axios.get(`http://localhost:8080/tours/summarizeReport`, { responseType: 'blob' });
+            const blob = new Blob([response.data], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `tour_report_${reportTourId}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setShowReportModal(false);
+        } catch (error) {
+            console.error('Error generating report:', error);
+        }
+    };
+
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
             <nav style={{ backgroundColor: '#333', padding: '10px', display: 'flex' }}>
@@ -271,7 +308,15 @@ function App() {
                         <div style={dropdownContentStyle}>
                             <button onClick={() => { setShowImportModal(true); setDropdownVisible(false); }} style={dropdownItemStyle}>Import Tour</button>
                             <button onClick={handleExportTours} style={dropdownItemStyle}>Export Tour</button>
-                            <button style={dropdownItemStyle}>Generate Report</button>
+                            <div style={{ position: 'relative' }}>
+                                <button onClick={() => setReportDropdownVisible(!reportDropdownVisible)} style={dropdownItemStyle}>Generate Report</button>
+                                {reportDropdownVisible && (
+                                    <div style={dropdownContentStyle}>
+                                        <button onClick={() => { setShowReportModal(true); setReportDropdownVisible(false); }} style={dropdownItemStyle}>Tour Report</button>
+                                        <button onClick={handleSummarizeReport} style={dropdownItemStyle}>Summarize Report</button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     )}
                 </div>
@@ -390,146 +435,160 @@ function App() {
                                         <th style={tableHeaderStyle}>Comment</th>
                                         <th style={tableHeaderStyle}>Difficulty</th>
                                         <th style={tableHeaderStyle}>Total Distance</th>
-                                    <th style={tableHeaderStyle}>Total Time</th>
-                                    <th style={tableHeaderStyle}>Rating</th>
+                                        <th style={tableHeaderStyle}>Total Time</th>
+                                        <th style={tableHeaderStyle}>Rating</th>
                                     </tr>
-                                </thead>
-                                <tbody>
-                                {tourLogs.map((log, index) => (
-                                    <tr key={index}>
-                                        <td style={tableCellStyle}>{log.id}</td>
-                                        <td style={tableCellStyle}>{log.tourid}</td>
-                                        <td style={tableCellStyle}>{log.date}</td>
-                                        <td style={tableCellStyle}>{log.time}</td>
-                                        <td style={tableCellStyle}>{log.comment}</td>
-                                        <td style={tableCellStyle}>{log.difficulty}</td>
-                                        <td style={tableCellStyle}>{log.totalDistance}</td>
-                                        <td style={tableCellStyle}>{log.totalTime}</td>
-                                        <td style={tableCellStyle}>{log.rating}</td>
-                                    </tr>
-                                ))}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                    {tourLogs.map((log, index) => (
+                                        <tr key={index}>
+                                            <td style={tableCellStyle}>{log.id}</td>
+                                            <td style={tableCellStyle}>{log.tourid}</td>
+                                            <td style={tableCellStyle}>{log.date}</td>
+                                            <td style={tableCellStyle}>{log.time}</td>
+                                            <td style={tableCellStyle}>{log.comment}</td>
+                                            <td style={tableCellStyle}>{log.difficulty}</td>
+                                            <td style={tableCellStyle}>{log.totalDistance}</td>
+                                            <td style={tableCellStyle}>{log.totalTime}</td>
+                                            <td style={tableCellStyle}>{log.rating}</td>
+                                        </tr>
+                                    ))}
+                                    </tbody>
+                                </table>
                             </div>
-                            )}
-
+                        )}
                     </div>
                 </div>
             </div>
 
             {showAddForm && formType === 'Tour' && (
-            <div style={{
-                position: 'absolute',
-                bottom: '20px',
-                left: '20px',
-                padding: '20px',
-                border: '1px solid #ccc',
-                backgroundColor: '#f9f9f9'
-            }}>
-                <h2>Add New Tour</h2>
-                <form onSubmit={handleAddFormSubmit}>
-                    <div style={{marginBottom: '10px'}}>
-                        <label htmlFor="name" style={{marginRight: '10px'}}>Name:</label>
-                        <input type="text" id="name" name="name" value={newTour.name}
-                               onChange={handleAddFormChange}/>
-                    </div>
-                    <div style={{marginBottom: '10px'}}>
-                        <label htmlFor="tourDescription" style={{marginRight: '10px'}}>Tour Description:</label>
-                        <input type="text" id="tourDescription" name="tourDescription"
-                               value={newTour.tourDescription} onChange={handleAddFormChange}/>
-                    </div>
-                    <div style={{ marginBottom: '10px' }}>
-                        <label htmlFor="fromm" style={{ marginRight: '10px' }}>From:</label>
-                        <input type="text" id="fromm" name="fromm" value={newTour.fromm} onChange={handleAddFormChange} />
-                    </div>
-                    <div style={{ marginBottom: '10px' }}>
-                        <label htmlFor="too" style={{ marginRight: '10px' }}>To:</label>
-                        <input type="text" id="too" name="too" value={newTour.too} onChange={handleAddFormChange} />
-                    </div>
-                    <div style={{marginBottom: '10px'}}>
-                        <label htmlFor="transportType" style={{marginRight: '10px'}}>Transport Type:</label>
-                        <select id="transportType" name="transportType" value={newTour.transportType} onChange={handleAddFormChange}>
-                            <option value="Foot">Foot</option>
-                            <option value="Car">Car</option>
-                            <option value="Bicycle">Bicycle</option>
-                        </select>
-                    </div>
-                    <div>
-                        <button type="submit" style={submitButtonStyle}>Send</button>
-                        <button type="button" onClick={() => setShowAddForm(false)} style={cancelButtonStyle}>Cancel</button>
-                    </div>
-                </form>
-            </div>
+                <div style={{
+                    position: 'absolute',
+                    bottom: '20px',
+                    left: '20px',
+                    padding: '20px',
+                    border: '1px solid #ccc',
+                    backgroundColor: '#f9f9f9'
+                }}>
+                    <h2>Add New Tour</h2>
+                    <form onSubmit={handleAddFormSubmit}>
+                        <div style={{marginBottom: '10px'}}>
+                            <label htmlFor="name" style={{marginRight: '10px'}}>Name:</label>
+                            <input type="text" id="name" name="name" value={newTour.name}
+                                   onChange={handleAddFormChange}/>
+                        </div>
+                        <div style={{marginBottom: '10px'}}>
+                            <label htmlFor="tourDescription" style={{marginRight: '10px'}}>Tour Description:</label>
+                            <input type="text" id="tourDescription" name="tourDescription"
+                                   value={newTour.tourDescription} onChange={handleAddFormChange}/>
+                        </div>
+                        <div style={{ marginBottom: '10px' }}>
+                            <label htmlFor="fromm" style={{ marginRight: '10px' }}>From:</label>
+                            <input type="text" id="fromm" name="fromm" value={newTour.fromm} onChange={handleAddFormChange} />
+                        </div>
+                        <div style={{ marginBottom: '10px' }}>
+                            <label htmlFor="too" style={{ marginRight: '10px' }}>To:</label>
+                            <input type="text" id="too" name="too" value={newTour.too} onChange={handleAddFormChange} />
+                        </div>
+                        <div style={{marginBottom: '10px'}}>
+                            <label htmlFor="transportType" style={{marginRight: '10px'}}>Transport Type:</label>
+                            <select id="transportType" name="transportType" value={newTour.transportType} onChange={handleAddFormChange}>
+                                <option value="Foot">Foot</option>
+                                <option value="Car">Car</option>
+                                <option value="Bicycle">Bicycle</option>
+                            </select>
+                        </div>
+                        <div>
+                            <button type="submit" style={submitButtonStyle}>Send</button>
+                            <button type="button" onClick={() => setShowAddForm(false)} style={cancelButtonStyle}>Cancel</button>
+                        </div>
+                    </form>
+                </div>
             )}
 
             {showAddForm && formType === 'TourLog' && (
-            <div style={{ position: 'absolute', bottom: '20px', left: '20px', padding: '20px', border: '1px solid #ccc', backgroundColor: '#f9f9f9' }}>
-                <h2>Add New Tour Log</h2>
-                <form onSubmit={handleAddTourLogFormSubmit}>
-                    <div style={{ marginBottom: '10px' }}>
-                        <label htmlFor="tourid" style={{ marginRight: '10px' }}>Tour ID:</label>
-                        <input type="text" id="tourid" name="tourid" value={newTourLog.tourid} onChange={handleAddTourLogFormChange} />
-                    </div>
-                    <div style={{ marginBottom: '10px' }}>
-                        <label htmlFor="date" style={{ marginRight: '10px' }}>Date:</label>
-                        <input type="text" id="date" name="date" value={newTourLog.date} onChange={handleAddTourLogFormChange} />
-                    </div>
-                    <div style={{ marginBottom: '10px' }}>
-                        <label htmlFor="time" style={{ marginRight: '10px' }}>Time:</label>
-                        <input type="text" id="time" name="time" value={newTourLog.time} onChange={handleAddTourLogFormChange} />
-                    </div>
-                    <div style={{ marginBottom: '10px' }}>
-                        <label htmlFor="comment" style={{ marginRight: '10px' }}>Comment:</label>
-                        <input type="text" id="comment" name="comment" value={newTourLog.comment} onChange={handleAddTourLogFormChange} />
-                    </div>
-                    <div style={{ marginBottom: '10px' }}>
-                        <label htmlFor="difficulty" style={{ marginRight: '10px' }}>Difficulty:</label>
-                        <input type="text" id="difficulty" name="difficulty" value={newTourLog.difficulty} onChange={handleAddTourLogFormChange} />
-                    </div>
-                    <div style={{ marginBottom: '10px' }}>
-                        <label htmlFor="totalDistance" style={{ marginRight: '10px' }}>Total Distance:</label>
-                        <input type="text" id="totalDistance" name="totalDistance" value={newTourLog.totalDistance} onChange={handleAddTourLogFormChange} />
-                    </div>
-                    <div style={{ marginBottom: '10px' }}>
-                        <label htmlFor="totalTime" style={{ marginRight: '10px' }}>Total Time:</label>
-                        <input type="text" id="totalTime" name="totalTime" value={newTourLog.totalTime} onChange={handleAddTourLogFormChange} />
-                    </div>
-                    <div style={{ marginBottom: '10px' }}>
-                        <label htmlFor="rating" style={{ marginRight: '10px' }}>Rating:</label>
-                        <input type="text" id="rating" name="rating" value={newTourLog.rating} onChange={handleAddTourLogFormChange} />
-                    </div>
-                    <div>
-                        <button type="submit" style={submitButtonStyle}>Send</button>
-                        <button type="button" onClick={() => setShowAddForm(false)} style={cancelButtonStyle}>Cancel</button>
-                    </div>
-                </form>
-            </div>
+                <div style={{ position: 'absolute', bottom: '20px', left: '20px', padding: '20px', border: '1px solid #ccc', backgroundColor: '#f9f9f9' }}>
+                    <h2>Add New Tour Log</h2>
+                    <form onSubmit={handleAddTourLogFormSubmit}>
+                        <div style={{ marginBottom: '10px' }}>
+                            <label htmlFor="tourid" style={{ marginRight: '10px' }}>Tour ID:</label>
+                            <input type="text" id="tourid" name="tourid" value={newTourLog.tourid} onChange={handleAddTourLogFormChange} />
+                        </div>
+                        <div style={{ marginBottom: '10px' }}>
+                            <label htmlFor="date" style={{ marginRight: '10px' }}>Date:</label>
+                            <input type="text" id="date" name="date" value={newTourLog.date} onChange={handleAddTourLogFormChange} />
+                        </div>
+                        <div style={{ marginBottom: '10px' }}>
+                            <label htmlFor="time" style={{ marginRight: '10px' }}>Time:</label>
+                            <input type="text" id="time" name="time" value={newTourLog.time} onChange={handleAddTourLogFormChange} />
+                        </div>
+                        <div style={{ marginBottom: '10px' }}>
+                            <label htmlFor="comment" style={{ marginRight: '10px' }}>Comment:</label>
+                            <input type="text" id="comment" name="comment" value={newTourLog.comment} onChange={handleAddTourLogFormChange} />
+                        </div>
+                        <div style={{ marginBottom: '10px' }}>
+                            <label htmlFor="difficulty" style={{ marginRight: '10px' }}>Difficulty:</label>
+                            <input type="text" id="difficulty" name="difficulty" value={newTourLog.difficulty} onChange={handleAddTourLogFormChange} />
+                        </div>
+                        <div style={{ marginBottom: '10px' }}>
+                            <label htmlFor="totalDistance" style={{ marginRight: '10px' }}>Total Distance:</label>
+                            <input type="text" id="totalDistance" name="totalDistance" value={newTourLog.totalDistance} onChange={handleAddTourLogFormChange} />
+                        </div>
+                        <div style={{ marginBottom: '10px' }}>
+                            <label htmlFor="totalTime" style={{ marginRight: '10px' }}>Total Time:</label>
+                            <input type="text" id="totalTime" name="totalTime" value={newTourLog.totalTime} onChange={handleAddTourLogFormChange} />
+                        </div>
+                        <div style={{ marginBottom: '10px' }}>
+                            <label htmlFor="rating" style={{ marginRight: '10px' }}>Rating:</label>
+                            <input type="text" id="rating" name="rating" value={newTourLog.rating} onChange={handleAddTourLogFormChange} />
+                        </div>
+                        <div>
+                            <button type="submit" style={submitButtonStyle}>Send</button>
+                            <button type="button" onClick={() => setShowAddForm(false)} style={cancelButtonStyle}>Cancel</button>
+                        </div>
+                    </form>
+                </div>
             )}
 
             {showRemoveForm && (
-            <div style={{ position: 'absolute', bottom: '20px', left: '20px', padding: '20px', border: '1px solid #ccc', backgroundColor: '#f9f9f9' }}>
-                <h2>Remove {formType === 'Tour' ? 'Tour' : 'Tour Log'}</h2>
-                <form onSubmit={handleRemoveFormSubmit}>
-                    <div style={{ marginBottom: '10px' }}>
-                        <label htmlFor="removeId" style={{ marginRight: '10px' }}>ID:</label>
-                        <input type="text" id="removeId" name="removeId" value={removeId} onChange={handleRemoveFormChange} />
-                    </div>
-                    <div>
-                        <button type="submit" style={submitButtonStyle}>Send</button>
-                        <button type="button" onClick={() => setShowRemoveForm(false)} style={cancelButtonStyle}>Cancel</button>
-                    </div>
-                </form>
-            </div>
+                <div style={{ position: 'absolute', bottom: '20px', left: '20px', padding: '20px', border: '1px solid #ccc', backgroundColor: '#f9f9f9' }}>
+                    <h2>Remove {formType === 'Tour' ? 'Tour' : 'Tour Log'}</h2>
+                    <form onSubmit={handleRemoveFormSubmit}>
+                        <div style={{ marginBottom: '10px' }}>
+                            <label htmlFor="removeId" style={{ marginRight: '10px' }}>ID:</label>
+                            <input type="text" id="removeId" name="removeId" value={removeId} onChange={handleRemoveFormChange} />
+                        </div>
+                        <div>
+                            <button type="submit" style={submitButtonStyle}>Send</button>
+                            <button type="button" onClick={() => setShowRemoveForm(false)} style={cancelButtonStyle}>Cancel</button>
+                        </div>
+                    </form>
+                </div>
             )}
 
             {showImportModal && (
-            <div style={importModalStyle}>
-                <h2>Import Tour</h2>
-                <p>Here you can import a tour of your own. Upload a file in JSON format with the same attribute structure as the table of tours.</p>
-                <input type="file" onChange={handleFileChange} />
-                <button onClick={handleImportSubmit} style={submitButtonStyle}>Upload</button>
-                <button onClick={() => setShowImportModal(false)} style={cancelButtonStyle}>Cancel</button>
-            </div>
+                <div style={importModalStyle}>
+                    <h2>Import Tour</h2>
+                    <p>Here you can import a tour of your own. Upload a file in JSON format with the same attribute structure as the table of tours.</p>
+                    <input type="file" onChange={handleFileChange} />
+                    <button onClick={handleImportSubmit} style={submitButtonStyle}>Upload</button>
+                    <button onClick={() => setShowImportModal(false)} style={cancelButtonStyle}>Cancel</button>
+                </div>
+            )}
+
+            {showReportModal && (
+                <div style={importModalStyle}>
+                    <h2>Generate a Tour Report</h2>
+                    <p>Enter the Tour ID of the Tour to generate a report for:</p>
+                    <input
+                        type="text"
+                        value={reportTourId}
+                        onChange={(e) => setReportTourId(e.target.value)}
+                        style={{ width: '100%', marginBottom: '10px' }}
+                    />
+                    <button onClick={handleGenerateReport} style={submitButtonStyle}>Generate</button>
+                    <button onClick={() => setShowReportModal(false)} style={cancelButtonStyle}>Cancel</button>
+                </div>
             )}
         </div>
     );

@@ -65,16 +65,26 @@
 		<dependency>
 			<groupId>org.apache.logging.log4j</groupId>
 			<artifactId>log4j-core</artifactId>
-			<version>2.17.1</version> <!-- Use the latest stable version -->
+			<version>2.17.1</version> <!-- Use1 the latest stable version -->
 		</dependency>
 		<dependency>
 			<groupId>org.apache.logging.log4j</groupId>
 			<artifactId>log4j-api</artifactId>
 			<version>2.21.1</version>
 		</dependency>
+		<!-- iText 7 Dependencies -->
+		<dependency>
+			<groupId>com.itextpdf</groupId>
+			<artifactId>kernel</artifactId>
+			<version>7.1.10</version>
+		</dependency>
+		<dependency>
+			<groupId>com.itextpdf</groupId>
+			<artifactId>layout</artifactId>
+			<version>7.1.10</version>
+		</dependency>
 
 	</dependencies>
-
 	<build>
 		<plugins>
 			<plugin>
